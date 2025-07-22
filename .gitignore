@@ -1,0 +1,5 @@
+# Ignore DB and API keys
+*.db
+__pycache__/
+.env
+*.pyc

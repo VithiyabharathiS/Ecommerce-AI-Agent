@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>E-commerce AI Agent</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 30px;
+            max-width: 700px;
+            margin: auto;
+        }
+
+        textarea,
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            overflow-x: auto;
+        }
+
+        canvas {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Ask E-commerce AI Agent</h2>
+    <textarea id="question" rows="4" placeholder="Enter your question..."></textarea>
+    <button onclick="submitQuestion()">Ask</button>
+
+    <h3>SQL Generated</h3>
+    <pre id="sql"></pre>
+
+    <h3>Result</h3>
+    <pre id="result"></pre>
+
+    <canvas id="resultChart" width="400" height="200" style="display:none;"></canvas>
+
+    <script>
+        let chartInstance = null;
+
+        async function submitQuestion() {
+            const question = document.getElementById('question').value;
+            const sqlElement = document.getElementById('sql');
+            const resultElement = document.getElementById('result');
+            const chartCanvas = document.getElementById('resultChart');
+
+            sqlElement.innerText = "Loading...";
+            resultElement.innerText = "Processing...";
+            chartCanvas.style.display = "none";
+
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question })
+                });
+
+                const data = await response.json();
+
+                sqlElement.innerText = data.sql || 'No SQL generated';
+
+                const result = data.result;
+                let resultText = '';
+
+                if (result.length === 1 && typeof result[0] === 'object') {
+                    const row = result[0];
+                    const [key, value] = Object.entries(row)[0];
+                    resultText = `${key.replaceAll('_', ' ')}: ${value}`;
+                } else if (result.length > 0) {
+                    resultText = JSON.stringify(result, null, 2);
+                } else {
+                    resultText = "No results found.";
+                }
+
+                resultElement.innerText = resultText;
+
+                // Auto-render chart if the result is a list of objects with exactly 2 fields
+                if (result.length > 1 && Object.keys(result[0]).length === 2) {
+                    const labels = result.map(row => Object.values(row)[0]);
+                    const values = result.map(row => Object.values(row)[1]);
+
+                    chartCanvas.style.display = "block";
+
+                    if (chartInstance) chartInstance.destroy();  // Destroy old chart
+
+                    chartInstance = new Chart(chartCanvas, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: Object.keys(result[0])[1],
+                                data: values,
+                                backgroundColor: '#4CAF50'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    display: true
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Data Visualization'
+                                }
+                            }
+                        }
+                    });
+                }
+
+            } catch (err) {
+                sqlElement.innerText = "Error generating SQL";
+                resultElement.innerText = "Error: " + err.message;
+            }
+        }
+    </script>
+</body>
+
+</html>
