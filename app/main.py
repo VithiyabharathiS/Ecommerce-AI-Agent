@@ -15,11 +15,10 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-
 @app.get("/")
 def read_index():
-    return FileResponse("app/static/index.html")
-
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    return FileResponse(index_path)
 
 class QueryRequest(BaseModel):
     question: str
